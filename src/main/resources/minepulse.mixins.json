@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "club.someoneice.minepulse.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "DropExperienceBlockMixin",
+    "ServerPlayerGameModeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "ClientPlayerGameModeMixin"
+  ]
+}

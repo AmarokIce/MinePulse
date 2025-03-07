@@ -1,0 +1,43 @@
+{
+	"schemaVersion": 1,
+	"id": "minepulse",
+	"version": "${version}",
+	"name": "Mine Pulse",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"AmarokIce", "yumo2333"
+	],
+	"contact": {
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/minepulse/ICON.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"club.someoneice.minepulse.MinePulse"
+		]
+	},
+	"mixins": [
+		"minepulse.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.10",
+		"minecraft": "~1.21.4",
+		"java": ">=21"
+	},
+	"suggests": {
+	},
+	"custom": {
+		"modmenu": {
+			"badges": ["util"],
+			"parent": {
+				"id": "minepulse",
+				"name": "Mine Pulse",
+				"description": "Dig the ore!",
+				"icon": "assets/minepulse/ICON.png",
+				"badges": [ "util" ]
+			},
+			"update_checker": true
+		}
+	}
+}
