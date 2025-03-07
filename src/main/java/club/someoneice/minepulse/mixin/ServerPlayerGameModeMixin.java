@@ -14,6 +14,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 @Mixin(ServerPlayerGameMode.class)
 public final class ServerPlayerGameModeMixin {
 	@Shadow protected ServerLevel level;
@@ -30,15 +32,35 @@ public final class ServerPlayerGameModeMixin {
 			return;
 		}
 
-		BlockState block = this.level.getBlockState(pos);
+		final BlockState block = this.level.getBlockState(pos);
 		if (!this.player.getMainHandItem().getItem().canAttackBlock(block, level, pos, player)) {
 			return;
 		}
 
-		if (Config.BLOCKS.stream().noneMatch(block::is) && Config.TAGS.stream().noneMatch(block::is)) {
-			return;
+		AtomicBoolean flag = new AtomicBoolean(false);
+
+		if (Config.enableOre) {
+			Config.ORE_MARKS.stream().filter(it -> it.mark(block)).findFirst().ifPresent(it -> {
+				MinePulse.oreHook(player, level, pos, block, it);
+				flag.set(true);
+			});
+
+			if (flag.get()) {
+				cir.setReturnValue(true);
+				return;
+			}
 		}
 
-		cir.setReturnValue(MinePulse.hook(player, level, pos, block));
+		if (Config.enableTree) {
+			Config.TREE_MARKS.stream().filter(it -> it.mark(block)).findFirst().ifPresent(it -> {
+				// TODO - tree hook
+				MinePulse.oreHook(player, level, pos, block, it);
+				flag.set(true);
+			});
+
+			if (flag.get()) {
+				cir.setReturnValue(true);
+			}
+		}
 	}
 }

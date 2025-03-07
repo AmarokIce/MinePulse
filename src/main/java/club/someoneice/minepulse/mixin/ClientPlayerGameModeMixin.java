@@ -36,10 +36,12 @@ public final class ClientPlayerGameModeMixin {
             return;
         }
 
-        if (Config.BLOCKS.stream().noneMatch(block::is) && Config.TAGS.stream().noneMatch(block::is)) {
-            return;
+        if (Config.enableOre && Config.ORE_MARKS.stream().anyMatch(it -> it.mark(block))) {
+            cir.setReturnValue(false);
         }
 
-        cir.setReturnValue(false);
+        if (Config.enableTree && Config.TREE_MARKS.stream().anyMatch(it -> it.mark(block))) {
+            cir.setReturnValue(false);
+        }
     }
 }

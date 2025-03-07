@@ -13,6 +13,12 @@ base {
 loom {
 }
 
+configurations {
+	includeCompile
+	implementation.extendsFrom includeCompile
+}
+
+
 repositories {
      maven {
          name = 'ParchmentMC'
@@ -23,7 +29,13 @@ repositories {
 		name = "Terraformers"
 		url = "https://maven.terraformersmc.com/"
 	}
- }
+
+	maven {
+		name = "Amarok Maven"
+		url = "http://maven.snowlyicewolf.club"
+		allowInsecureProtocol = true
+	}
+}
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -36,6 +48,8 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	modImplementation "com.terraformersmc:modmenu:13.0.2"
+
+	includeCompile "club.someoneice.json:amarok-json-for-java:1.7.3"
 }
 
 processResources {
@@ -62,5 +76,9 @@ jar {
 
 	from("LICENSE") {
 		rename { "${it}_${inputs.properties.archivesName}"}
+	}
+
+	from {
+		configurations.includeCompile.collect { it.isDirectory() ? it : zipTree(it) }
 	}
 }

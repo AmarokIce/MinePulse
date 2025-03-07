@@ -54,7 +54,8 @@ public final class MinePulse implements ModInitializer {
 	}
 
 	// TODO - Oak
-	public static boolean hook(final Player player, final ServerLevel world, final BlockPos pos, final BlockState blockState) {
+	public static void oreHook(final Player player, final ServerLevel world, final BlockPos pos,
+								  final BlockState blockState, final OreMark mark) {
 		final Set<BlockPos> blockPos = Sets.newHashSet();
 		final Stack<BlockPos> blockPosStack = new Stack<>();
 
@@ -69,7 +70,7 @@ public final class MinePulse implements ModInitializer {
 				BlockPos posAt = posIn.relative(value);
 				BlockState state = world.getBlockState(posAt);
 
-				if (blockPos.contains(posAt) || !state.is(block)) {
+				if (blockPos.contains(posAt) || !mark.mark(state)) {
 					continue;
 				}
 
@@ -98,7 +99,6 @@ public final class MinePulse implements ModInitializer {
 				: posMap.get(posMap.keySet().stream().max(Comparator.naturalOrder()).get());
 
 		breakBlock(finalPos, world.getBlockState(finalPos), world, player, pos);
-		return true;
 	}
 
 	private static int dis(BlockPos A, BlockPos B) {
