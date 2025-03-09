@@ -6,8 +6,8 @@ This mod make you can mine all ores and trees without move, just mine at once po
 ## Let's find out:
 ### Ore
 
-![](/img/ore.gif)
+![](/img/Ore.gif)
 
 ### tree
 
-![](/img/tree.gif)
+![](/img/Tree.gif)
