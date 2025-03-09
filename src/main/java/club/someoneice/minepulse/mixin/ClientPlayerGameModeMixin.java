@@ -23,11 +23,11 @@ public final class ClientPlayerGameModeMixin {
         final Player player = this.minecraft.player;
         final Level world = this.minecraft.level;
 
-        if (player.isShiftKeyDown()) {
+        if (player.isShiftKeyDown() != Config.reversalShiftEnable) {
             return;
         }
 
-        if (player.isCreative()) {
+        if (player.isCreative() || player.isSpectator()) {
             return;
         }
 
@@ -36,11 +36,10 @@ public final class ClientPlayerGameModeMixin {
             return;
         }
 
-        if (Config.enableOre && Config.ORE_MARKS.stream().anyMatch(it -> it.mark(block))) {
-            cir.setReturnValue(false);
-        }
+        final Boolean flagOre = Config.enableOre && Config.ORE_MARKS.stream().anyMatch(it -> it.mark(block));
+        final Boolean flagTree = Config.enableTree && Config.TREE_MARKS.stream().anyMatch(it -> it.mark(block));
 
-        if (Config.enableTree && Config.TREE_MARKS.stream().anyMatch(it -> it.mark(block))) {
+        if (flagOre || flagTree) {
             cir.setReturnValue(false);
         }
     }

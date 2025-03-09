@@ -14,8 +14,10 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
@@ -46,25 +48,50 @@ public final class MinePulse implements ModInitializer {
 				final BlockPos pos = payload.get();
 				final BlockState state = world.getBlockState(pos);
 
-				world.playSound(player, pos, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
-				world.gameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Context.of(player, state));
 				world.levelEvent(player, 2001, pos, Block.getId(state));
+				world.playSound(player, pos, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
 			});
 		});
 	}
 
-	// TODO - Oak
-	public static void oreHook(final Player player, final ServerLevel world, final BlockPos pos,
-								  final BlockState blockState, final OreMark mark) {
+	public static void logHook(Player player, ServerLevel world, BlockPos pos) {
 		final Set<BlockPos> blockPos = Sets.newHashSet();
 		final Stack<BlockPos> blockPosStack = new Stack<>();
 
-		final Block block = blockState.getBlock();
+		final Block blockMark = world.getBlockState(pos).getBlock();
+
+		int cache = 0;
 
 		blockPos.add(pos);
 		blockPosStack.push(pos);
 
-		while(!blockPosStack.empty()) {
+		while(!blockPosStack.empty() && (Config.maxSizeCache == -1 || cache < Config.maxSizeCache)) {
+			BlockPos posIn = blockPosStack.pop();
+			for (BlockPos offset: BlockPos.betweenClosed(-1, 0, -1, 1, 1, 1)) {
+				BlockPos posAt = posIn.offset(offset);
+				if (blockPos.contains(posAt) || !world.getBlockState(posAt).is(blockMark)) {
+					continue;
+				}
+
+				cache++;
+				blockPos.add(posAt);
+				blockPosStack.push(posAt);
+			}
+		}
+
+		billing(blockPos, player, world, pos);
+	}
+
+	public static void oreHook(Player player, ServerLevel world, BlockPos pos, OreMark mark) {
+		final Set<BlockPos> blockPos = Sets.newHashSet();
+		final Stack<BlockPos> blockPosStack = new Stack<>();
+
+		int cache = 0;
+
+		blockPos.add(pos);
+		blockPosStack.push(pos);
+
+		while(!blockPosStack.empty() && (Config.maxSizeCache == -1 || cache < Config.maxSizeCache)) {
 			BlockPos posIn = blockPosStack.pop();
 			for (Direction value : Direction.values()) {
 				BlockPos posAt = posIn.relative(value);
@@ -74,11 +101,16 @@ public final class MinePulse implements ModInitializer {
 					continue;
 				}
 
+				cache++;
 				blockPos.add(posAt);
 				blockPosStack.push(posAt);
 			}
 		}
 
+		billing(blockPos, player, world, pos);
+	}
+
+	private static void billing(Set<BlockPos> blockPos, Player player, ServerLevel world, BlockPos pos) {
 		final int[] posYs = blockPos.stream()
 				.mapToInt(BlockPos::getY)
 				.distinct()
@@ -95,8 +127,9 @@ public final class MinePulse implements ModInitializer {
 				.filter(it -> it.getY() == fin && it != pos)
 				.forEach(it -> posMap.put(dis(pos, it), it));
 
-		final BlockPos finalPos = posMap.isEmpty() ? pos
-				: posMap.get(posMap.keySet().stream().max(Comparator.naturalOrder()).get());
+		final BlockPos finalPos = !posMap.isEmpty()
+				? posMap.get(posMap.keySet().stream().max(Comparator.naturalOrder()).get())
+				: pos;
 
 		breakBlock(finalPos, world.getBlockState(finalPos), world, player, pos);
 	}
@@ -105,12 +138,30 @@ public final class MinePulse implements ModInitializer {
 		return Math.abs(A.getX() - B.getX()) + Math.abs(A.getZ() - B.getZ());
 	}
 
+	private static void pushToPlayer (ItemEntity itemEntity, Player player) {
+		final Vec3 playerPos = player.position();
+		final Vec3 entityPos = itemEntity.position();
+
+		itemEntity.push((playerPos.x - entityPos.x) * 0.1, (playerPos.y - entityPos.y) * 0.1, (playerPos.z - entityPos.z) * 0.1);
+	}
+
 	private static void breakBlock(BlockPos pos, BlockState state, ServerLevel world, Player player, BlockPos oPos) {
 		ItemStack item = player.getMainHandItem();
 		item.mineBlock(world, state, pos, player);
 		Block.getDrops(state, world, pos, null, player, item.copy())
-				.forEach(itemStack ->
-						Block.popResource(world, player.getOnPos().above(2).relative(player.getDirection()), itemStack));
+				.forEach(itemStack -> {
+					// Block.popResource(world, player.getOnPos().above(2).relative(player.getDirection()), itemStack)
+					Direction dir = player.getDirection();
+					ItemEntity entity = new ItemEntity(world,
+							(oPos.getX() - dir.getStepX()) + 0.5,
+							(oPos.getY() - dir.getStepY()) + 0.5,
+							(oPos.getZ() - dir.getStepZ()) + 0.5,
+							itemStack);
+					entity.setDefaultPickUpDelay();
+					world.addFreshEntity(entity);
+					pushToPlayer(entity, player);
+				});
+
 
 		if (state.getBlock() instanceof DropExperienceBlock exp) {
 			int expDrops = ((DropExperienceBlockMixin) exp).getXpRange().sample(world.random);
@@ -119,10 +170,12 @@ public final class MinePulse implements ModInitializer {
 			}
 		}
 
+		for (ServerPlayer serverPlayer : world.players()) {
+			ServerPlayNetworking.send(serverPlayer, new BlockSoundPacket(pos));
+		}
 
-		world.players().forEach(it -> ServerPlayNetworking.send(it, new BlockSoundPacket(pos)));
-		world.gameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Context.of(player, state));
 		world.removeBlock(pos, false);
+		world.gameEvent(GameEvent.BLOCK_DESTROY, pos, GameEvent.Context.of(player, state));
 	}
 
 	public static class BlockSoundPacket implements CustomPacketPayload {

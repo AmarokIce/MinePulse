@@ -24,11 +24,11 @@ public final class ServerPlayerGameModeMixin {
 
 	@Inject(method = "destroyBlock", at = @At("HEAD"), cancellable = true)
 	private void willDestroyBlock(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-		if (player.isShiftKeyDown()) {
+		if (player.isShiftKeyDown() != Config.reversalShiftEnable) {
 			return;
 		}
 
-		if (this.player.isCreative()) {
+		if (this.player.isCreative() || this.player.isSpectator()) {
 			return;
 		}
 
@@ -41,7 +41,7 @@ public final class ServerPlayerGameModeMixin {
 
 		if (Config.enableOre) {
 			Config.ORE_MARKS.stream().filter(it -> it.mark(block)).findFirst().ifPresent(it -> {
-				MinePulse.oreHook(player, level, pos, block, it);
+				MinePulse.oreHook(player, level, pos, it);
 				flag.set(true);
 			});
 
@@ -53,8 +53,7 @@ public final class ServerPlayerGameModeMixin {
 
 		if (Config.enableTree) {
 			Config.TREE_MARKS.stream().filter(it -> it.mark(block)).findFirst().ifPresent(it -> {
-				// TODO - tree hook
-				MinePulse.oreHook(player, level, pos, block, it);
+				MinePulse.logHook(player, level, pos);
 				flag.set(true);
 			});
 

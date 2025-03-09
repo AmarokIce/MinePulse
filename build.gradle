@@ -20,10 +20,12 @@ configurations {
 
 
 repositories {
-     maven {
-         name = 'ParchmentMC'
-         url = 'https://maven.parchmentmc.org'
-     }
+	mavenLocal();
+
+    maven {
+        name = 'ParchmentMC'
+        url = 'https://maven.parchmentmc.org'
+    }
 
 	maven {
 		name = "Terraformers"
@@ -49,7 +51,7 @@ dependencies {
 
 	modImplementation "com.terraformersmc:modmenu:13.0.2"
 
-	includeCompile "club.someoneice.json:amarok-json-for-java:1.7.3"
+	includeCompile "club.someoneice.json:amarok-json-for-java:1.7.6"
 }
 
 processResources {
