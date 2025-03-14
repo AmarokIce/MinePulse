@@ -1,0 +1,10 @@
+{
+  "screen.minepulse.choose": "Choose your key scheme:",
+  "screen.minepulse.config": "(You can changed it on config later)",
+  "screen.minepulse.pass": "Mine with pass the shift key",
+  "screen.minepulse.unpass": "Mine without pass the shift key",
+  "option.minepulse.shouldAsk": "Should create ask screen in game",
+  "option.minepulse.enableTree": "Enable tree miner",
+  "option.minepulse.enableOre": "Enable ore miner",
+  "option.minepulse.reversal": "Reversal shift key down to mine"
+}

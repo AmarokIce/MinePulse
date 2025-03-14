@@ -2,19 +2,25 @@
 	"schemaVersion": 1,
 	"id": "minepulse",
 	"version": "${version}",
-	"name": "Mine Pulse",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "一脉相挖 Mine Pulse",
+	"description": "感受不一样的连锁挖掘吧！",
 	"authors": [
 		"AmarokIce", "yumo2333"
 	],
 	"contact": {
 	},
-	"license": "CC0-1.0",
+	"license": "MPL-2.0",
 	"icon": "assets/minepulse/ICON.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"club.someoneice.minepulse.MinePulse"
+			"club.someoneice.minepulse.core.MinePulse"
+		],
+		"client": [
+			"club.someoneice.minepulse.client.ClientInit"
+		],
+		"modmenu": [
+			"club.someoneice.minepulse.client.ConfigApi"
 		]
 	},
 	"mixins": [

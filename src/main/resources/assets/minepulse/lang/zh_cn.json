@@ -1,0 +1,10 @@
+{
+  "screen.minepulse.choose": "选择你的连锁挖掘方式：",
+  "screen.minepulse.config": "(选择后依然可以在配置文件中修改)",
+  "screen.minepulse.pass": "按住 Shift 时启用",
+  "screen.minepulse.unpass": "未按住 Shift 时启用",
+  "option.minepulse.shouldAsk": "启用游戏内询问界面",
+  "option.minepulse.enableTree": "允许连锁砍树",
+  "option.minepulse.enableOre": "允许连锁挖矿",
+  "option.minepulse.reversal": "反转 Shift 作用于连锁挖掘"
+}

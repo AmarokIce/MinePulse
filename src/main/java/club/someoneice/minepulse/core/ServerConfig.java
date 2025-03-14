@@ -1,4 +1,4 @@
-package club.someoneice.minepulse;
+package club.someoneice.minepulse.core;
 
 import club.someoneice.json.JSON;
 import club.someoneice.json.node.*;
@@ -17,17 +17,14 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Set;
 
-public final class Config {
+public final class ServerConfig {
     public static final Set<OreMark> ORE_MARKS = Sets.newHashSet();
     public static final Set<OreMark> TREE_MARKS = Sets.newHashSet();
 
-    public static boolean enableOre = true;
-    public static boolean enableTree = true;
-    public static boolean reversalShiftEnable = false;
     public static int maxSizeCache = 1024;
 
     public static void read() throws IOException {
-        final File file = new File(FabricLoader.getInstance().getConfigDir().toFile(), "minepulse.json");
+        final File file = new File(FabricLoader.getInstance().getConfigDir().toFile(), "minepulse_common.json");
         checkFile(file);
 
         MapNode node = JSON.json.parse(file).asMapNodeOrEmpty();
@@ -36,16 +33,6 @@ public final class Config {
 
         foreach(ores, ORE_MARKS);
         foreach(trees, TREE_MARKS);
-
-        enableOre = node.has("enableOreMine")
-                ? Boolean.parseBoolean(node.get("enableOreMine").toString())
-                : enableOre;
-        enableTree = node.has("enableTreeMine")
-                ? Boolean.parseBoolean(node.get("enableTreeMine").toString())
-                : enableTree;
-        reversalShiftEnable = node.has("reversalShiftEnable")
-                ? Boolean.parseBoolean(node.get("reversalShiftEnable").toString())
-                : enableTree;
         maxSizeCache = node.has("maxSizeCache")
                 ? (int) node.get("maxSizeCache").getObj()
                 : maxSizeCache;
@@ -79,6 +66,30 @@ public final class Config {
                 to("#minecraft:logs")
         ));
 
+        /* Mods */
+
+        node.add(to("#c:ores/bauxite"));
+        node.add(to("#c:ores/cinnabar"));
+        node.add(to("#c:ores/galena"));
+        node.add(to("#c:ores/iridium"));
+        node.add(to("#c:ores/lead"));
+        node.add(to("#c:ores/peridot"));
+        node.add(to("#c:ores/pyrite"));
+        node.add(to("#c:ores/ruby"));
+        node.add(to("#c:ores/sapphire"));
+        node.add(to("#c:ores/sheldonite"));
+        node.add(to("#c:ores/silver"));
+        node.add(to("#c:ores/sodalite"));
+        node.add(to("#c:ores/sphalerite"));
+        node.add(to("#c:ores/tin"));
+        node.add(to("#c:ores/tungsten"));
+
+        node.add(to("#c:desh_ores"));
+        node.add(to("#c:storage_blocks/raw_desh"));
+        node.add(to("#c:ice_shard_ores"));
+        node.add(to("#c:ostrum_ores"));
+        node.add(to("#c:calorite_ores"));
+
         if (FabricLoader.getInstance().isModLoaded("create")) {
             node.addAll(List.of(
                     to("#c:zinc_ores"),
@@ -86,35 +97,8 @@ public final class Config {
             ));
         }
 
-        if (FabricLoader.getInstance().isModLoaded("techreborn")) {
-            node.addAll(List.of(
-                    to("#c:ores/bauxite"),
-                    to("#c:ores/cinnabar"),
-                    to("#c:ores/galena"),
-                    to("#c:ores/iridium"),
-                    to("#c:ores/lead"),
-                    to("#c:ores/peridot"),
-                    to("#c:ores/pyrite"),
-                    to("#c:ores/ruby"),
-                    to("#c:ores/sapphire"),
-                    to("#c:ores/sheldonite"),
-                    to("#c:ores/silver"),
-                    to("#c:ores/sodalite"),
-                    to("#c:ores/sphalerite"),
-                    to("#c:ores/tin"),
-                    to("#c:ores/tungsten")
-            ));
-        }
-
         if (FabricLoader.getInstance().isModLoaded("ad_astra")) {
-            node.addAll(List.of(
-                    to("ad_astra:moon_cheese_ore"),
-                    to("#c:desh_ores"),
-                    to("#c:storage_blocks/raw_desh"),
-                    to("#c:ice_shard_ores"),
-                    to("#c:ostrum_ores"),
-                    to("#c:calorite_ores")
-            ));
+            node.add(to("ad_astra:moon_cheese_ore"));
         }
 
         if (FabricLoader.getInstance().isModLoaded("anvilcraft")) {
@@ -137,9 +121,6 @@ public final class Config {
         MapNode out = new MapNode();
         out.put("ores", node);
         out.put("trees", treeNode);
-        out.put("enableOreMine", new BooleanNode(true));
-        out.put("enableTreeMine", new BooleanNode(true));
-        out.put("reversalShiftEnable", new BooleanNode(false));
         out.put("maxSizeCache", new IntegerNode(1024));
 
         String data = JsonBuilder.prettyPrint(out);

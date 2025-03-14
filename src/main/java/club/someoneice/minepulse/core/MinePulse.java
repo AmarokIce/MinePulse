@@ -1,10 +1,9 @@
-package club.someoneice.minepulse;
+package club.someoneice.minepulse.core;
 
 import club.someoneice.minepulse.mixin.DropExperienceBlockMixin;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
@@ -15,13 +14,11 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DropExperienceBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -32,26 +29,21 @@ import java.io.IOException;
 import java.util.*;
 
 public final class MinePulse implements ModInitializer {
+	public static final Map<String, Boolean> PLAYER_STATE = Maps.newConcurrentMap();
+
 	@Override
 	public void onInitialize() {
-        try {
-            Config.read();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+		try {
+			ServerConfig.read();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 
         PayloadTypeRegistry.playS2C().register(BlockSoundPacket.ID, BlockSoundPacket.CODEC);
-		ClientPlayNetworking.registerGlobalReceiver(BlockSoundPacket.ID, (payload, context) -> {
-			context.client().execute(() -> {
-				final Player player = context.player();
-				final Level world = context.client().level;
-				final BlockPos pos = payload.get();
-				final BlockState state = world.getBlockState(pos);
+		PayloadTypeRegistry.playC2S().register(PlayerChangedStatePacket.ID, PlayerChangedStatePacket.CODEC);
 
-				world.levelEvent(player, 2001, pos, Block.getId(state));
-				world.playSound(player, pos, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
-			});
-		});
+		ServerPlayNetworking.registerGlobalReceiver(MinePulse.PlayerChangedStatePacket.ID, (payload, context) ->
+			context.server().execute(() -> PLAYER_STATE.put(context.player().getDisplayName().getString(), payload.get())));
 	}
 
 	public static void logHook(Player player, ServerLevel world, BlockPos pos) {
@@ -65,7 +57,7 @@ public final class MinePulse implements ModInitializer {
 		blockPos.add(pos);
 		blockPosStack.push(pos);
 
-		while(!blockPosStack.empty() && (Config.maxSizeCache == -1 || cache < Config.maxSizeCache)) {
+		while(!blockPosStack.empty() && (ServerConfig.maxSizeCache == -1 || cache < ServerConfig.maxSizeCache)) {
 			BlockPos posIn = blockPosStack.pop();
 			for (BlockPos offset: BlockPos.betweenClosed(-1, 0, -1, 1, 1, 1)) {
 				BlockPos posAt = posIn.offset(offset);
@@ -91,7 +83,7 @@ public final class MinePulse implements ModInitializer {
 		blockPos.add(pos);
 		blockPosStack.push(pos);
 
-		while(!blockPosStack.empty() && (Config.maxSizeCache == -1 || cache < Config.maxSizeCache)) {
+		while(!blockPosStack.empty() && (ServerConfig.maxSizeCache == -1 || cache < ServerConfig.maxSizeCache)) {
 			BlockPos posIn = blockPosStack.pop();
 			for (Direction value : Direction.values()) {
 				BlockPos posAt = posIn.relative(value);
@@ -145,18 +137,31 @@ public final class MinePulse implements ModInitializer {
 		itemEntity.push((playerPos.x - entityPos.x) * 0.1, (playerPos.y - entityPos.y) * 0.1, (playerPos.z - entityPos.z) * 0.1);
 	}
 
+	private static Vec3 getRealVec(Player player, BlockPos pos) {
+		final Vec3 vec = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+		final BlockPos posOn = player.getOnPos();
+
+		final double offsetY = posOn.getY() < pos.getY()
+				? pos.getY() - posOn.getY() >= 2 ? -0.7 : 0
+				: 0.7;
+		final double offsetX = posOn.getX() != pos.getX()
+				? posOn.getX() > pos.getX() ? 0.7 : -0.7
+				: 0;
+		final double offsetZ = posOn.getZ() != pos.getZ()
+				? posOn.getZ() > pos.getZ() ? 0.7 : -0.7
+				: 0;
+
+		return vec.add(offsetX, offsetY, offsetZ);
+	}
+
 	private static void breakBlock(BlockPos pos, BlockState state, ServerLevel world, Player player, BlockPos oPos) {
 		ItemStack item = player.getMainHandItem();
 		item.mineBlock(world, state, pos, player);
 		Block.getDrops(state, world, pos, null, player, item.copy())
 				.forEach(itemStack -> {
 					// Block.popResource(world, player.getOnPos().above(2).relative(player.getDirection()), itemStack)
-					Direction dir = player.getDirection();
-					ItemEntity entity = new ItemEntity(world,
-							(oPos.getX() - dir.getStepX()) + 0.5,
-							(oPos.getY() - dir.getStepY()) + 0.5,
-							(oPos.getZ() - dir.getStepZ()) + 0.5,
-							itemStack);
+					Vec3 vc = getRealVec(player, oPos);
+					ItemEntity entity = new ItemEntity(world, vc.x(), vc.y(), vc.z(), itemStack);
 					entity.setDefaultPickUpDelay();
 					world.addFreshEntity(entity);
 					pushToPlayer(entity, player);
@@ -198,6 +203,35 @@ public final class MinePulse implements ModInitializer {
 
 		public BlockPos get() {
 			return this.pos;
+		}
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return ID;
+		}
+	}
+
+	public static class PlayerChangedStatePacket implements CustomPacketPayload {
+		public static final Type<PlayerChangedStatePacket> ID = new CustomPacketPayload.Type<>(ResourceLocation.tryParse("minepulse:playerstate"));
+		public static final StreamCodec<FriendlyByteBuf, PlayerChangedStatePacket> CODEC
+				= CustomPacketPayload.codec(PlayerChangedStatePacket::write, PlayerChangedStatePacket::new);
+
+		private final boolean state;
+
+		public PlayerChangedStatePacket(FriendlyByteBuf buffer) {
+			this.state = buffer.readBoolean();
+		}
+
+		public PlayerChangedStatePacket(boolean state) {
+			this.state = state;
+		}
+
+		private void write(FriendlyByteBuf buffer) {
+			buffer.writeBoolean(this.state);
+		}
+
+		public boolean get() {
+			return this.state;
 		}
 
 		@Override

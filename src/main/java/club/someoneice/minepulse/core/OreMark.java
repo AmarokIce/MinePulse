@@ -1,4 +1,4 @@
-package club.someoneice.minepulse;
+package club.someoneice.minepulse.core;
 
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
